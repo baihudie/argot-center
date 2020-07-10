@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package netty;
+option java_package = "com.baihudie.api.proto";
+option java_outer_classname = "ArgotResProto";
+
+message ArgotRes {
+  int32 resSeq = 1;
+  int32 resCode = 2;
+  string resMsg = 3;
+  int32 resType = 4;
+  string body = 5;
+}
