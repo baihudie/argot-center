@@ -1,17 +1,22 @@
-server:
-  port: 8080
-  servlet:
-    context-path: /
-
-
 spring:
   datasource:
     driver-class-name: org.sqlite.JDBC
     url: jdbc:sqlite::resource:argot.db
 #    username:
-#    password:fastjson
-
+#    password:
 
 mybatis:
   mapper-locations: classpath*:mapping/*.xml
-  type-aliases-package: com.baihudie.web.model
+  type-aliases-package: com.baihudie.desktop.model
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,8 +1,8 @@
 package com.baihudie.web.controller;
 
 import com.baihudie.api.common.WebRes;
-import com.baihudie.core.mapper.UsersMapper;
-import com.baihudie.core.model.Users;
+import com.baihudie.web.mapper.ArgotUsersMapper;
+import com.baihudie.web.model.ArgotUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class HelloController {
 
     @Autowired
-    private UsersMapper usersMapper;
+    private ArgotUsersMapper argotUsersMapper;
 
     @GetMapping(path = "/hello")
     public WebRes hello(String name) {
@@ -26,7 +26,7 @@ public class HelloController {
 //
 //        usersMapper.insertUsers(users);
 
-        Users users = usersMapper.getUsersById(1);
+        ArgotUsers users = argotUsersMapper.getArgotUsersById(1);
 
         return WebRes.success("hello " + name + users);
     }

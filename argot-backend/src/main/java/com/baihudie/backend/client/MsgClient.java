@@ -1,4 +1,4 @@
-package com.baihudie.backend.netty.msg;
+package com.baihudie.backend.client;
 
 import com.baihudie.api.proto.ArgotResProto;
 import io.netty.bootstrap.Bootstrap;

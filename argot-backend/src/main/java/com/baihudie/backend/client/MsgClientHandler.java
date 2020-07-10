@@ -1,4 +1,4 @@
-package com.baihudie.backend.netty.msg;
+package com.baihudie.backend.client;
 
 import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
@@ -6,7 +6,7 @@ import com.baihudie.api.proto.ArgotReqProto;
 import com.baihudie.api.proto.ArgotResProto;
 import com.baihudie.api.proto.body.ReqActiveBody;
 import com.baihudie.api.proto.body.ReqChatAllBody;
-import com.baihudie.backend.service.MsgClientService;
+import com.baihudie.backend.client.MsgClientService;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;

@@ -1,4 +1,4 @@
-package com.baihudie.backend.service;
+package com.baihudie.backend.client;
 
 import com.alibaba.fastjson.JSON;
 import com.baihudie.api.proto.*;

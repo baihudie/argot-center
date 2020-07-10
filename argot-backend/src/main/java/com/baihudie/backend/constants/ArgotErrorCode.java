@@ -12,4 +12,5 @@ public interface ArgotErrorCode {
 
     //client
     int PSEUDONYM_NULL = 2001;
+    int REQ_TYPE_NOT_SUPPORT = 2002;
 }

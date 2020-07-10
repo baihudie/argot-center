@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.baihudie.web.mapper.ArgotUsersMapper">
+
+    <resultMap type="com.baihudie.web.model.ArgotUsers"
+               id="ArgotUsersMap">
+
+        <result column="id" property="id"/>
+        <result column="mobile" property="mobile"/>
+        <result column="good_name" property="goodName"/>
+        <result column="bandit_code" property="banditCode"/>
+        <result column="passwd" property="passwd"/>
+        <result column="property1" property="property1"/>
+        <result column="property2" property="property2"/>
+        <result column="property3" property="property3"/>
+        <result column="property4" property="property4"/>
+        <result column="property5" property="property5"/>
+        <result column="property6" property="property6"/>
+        <result column="property7" property="property7"/>
+        <result column="property8" property="property8"/>
+        <result column="property9" property="property9"/>
+        <result column="state" property="state"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+
+    </resultMap>
+
+
+    <sql id="baseSql">
+        id,
+        mobile,
+        good_name,
+        bandit_code,
+        passwd,
+        property1,
+        property2,
+        property3,
+        property4,
+        property5,
+        property6,
+        property7,
+        property8,
+        property9,
+        state,
+        remark,
+        create_time,
+        update_time
+    </sql>
+
+
+    <insert id="insertArgotUsers" parameterType="com.baihudie.web.model.ArgotUsers">
+        insert into argot_users (
+        id,
+        mobile,
+        good_name,
+        bandit_code,
+        passwd,
+        property1,
+        property2,
+        property3,
+        property4,
+        property5,
+        property6,
+        property7,
+        property8,
+        property9,
+        state,
+        remark,
+        create_time,
+        update_time
+        ) values (
+        #{id},
+        #{mobile},
+        #{goodName},
+        #{banditCode},
+        #{passwd},
+        #{property1},
+        #{property2},
+        #{property3},
+        #{property4},
+        #{property5},
+        #{property6},
+        #{property7},
+        #{property8},
+        #{property9},
+        #{state},
+        #{remark},
+        #{createTime},
+        #{updateTime}
+        )
+    </insert>
+    <select id="getArgotUsersById" resultType="com.baihudie.web.model.ArgotUsers">
+        select <include refid="baseSql"/>
+        from argot_users
+        where id = #{id}
+    </select>
+
+</mapper>

@@ -1,6 +1,6 @@
 package com.baihudie.backend;
 
-import com.baihudie.backend.netty.msg.MsgServer;
+import com.baihudie.backend.server.MsgServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
