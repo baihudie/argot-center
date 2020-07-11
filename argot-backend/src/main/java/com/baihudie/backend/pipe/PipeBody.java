@@ -29,4 +29,14 @@ public class PipeBody {
 
         messageBodyList.add(messageBody);
     }
+
+    public void addMessageBody(String pseudonym, int resType, String body) {
+        MessageBody messageBody = new MessageBody();
+        messageBody.setPseudonym(pseudonym);
+        messageBody.setResType(resType);
+        messageBody.setBody(body);
+
+        messageBodyList.add(messageBody);
+
+    }
 }

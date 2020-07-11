@@ -3,12 +3,9 @@ package com.baihudie.api.proto.body;
 import lombok.Data;
 
 @Data
-public class InviteApplyToResBody {
+public class InviteAcceptReqBody {
 
+    //同意接收人
     private String originPseudonym;
-
-    private String originGoodName;
-
-    private String notes;
 
 }

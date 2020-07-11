@@ -7,7 +7,10 @@ import com.baihudie.api.proto.body.ActiveResBody;
 import com.baihudie.backend.constants.ArgotErrorCode;
 import com.baihudie.backend.constants.ArgotException;
 import com.baihudie.backend.entity.BanditEntity;
-import com.baihudie.backend.pipe.*;
+import com.baihudie.backend.pipe.ControlBody;
+import com.baihudie.backend.pipe.PipeBody;
+import com.baihudie.backend.pipe.PipeBodyCon;
+import com.baihudie.backend.pipe.PipeHandlerDispatcher;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -59,16 +62,11 @@ public class ActiveHandler extends PipeHandlerDispatcher {
         pipeBodyCon.setControlBody(controlBody);
 
         //信息平面，外部
-        MessageBody messageBody = new MessageBody();
-        messageBody.setPseudonym(newPseudonym);
-
         //发送消息
         ActiveResBody resBody = new ActiveResBody();
         resBody.setPseudonym(newPseudonym);
-        messageBody.setBody(JSON.toJSONString(resBody));
-        messageBody.setResType(ArgotType.RES_ACTIVE);
 
-        pipeBodyCon.addMessageBody(messageBody);
+        pipeBodyCon.addMessageBody(newPseudonym, ArgotType.RES_ACTIVE, JSON.toJSONString(resBody));
 
         return pipeBodyCon;
     }

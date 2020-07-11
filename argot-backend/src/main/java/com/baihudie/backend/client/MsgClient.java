@@ -24,6 +24,12 @@ import java.util.UUID;
 @Slf4j
 public class MsgClient {
 
+//    public static String serverHost = "110ceee9.nat123.fun";
+//    public static int serverPort = 25574;
+
+    public static String serverHost = "localhost";
+    public static int serverPort = 4685;
+
     public static void main(String[] args) throws IOException {
 
         String banditCode = new StringBuffer(UUID.randomUUID().toString().replaceAll("-", ""))
@@ -57,9 +63,8 @@ public class MsgClient {
                                      pipeline.addLast(msgClientHandler);
                                  }
                              }
-
                     )
-                    .connect(new InetSocketAddress("localhost", 4685)).channel();
+                    .connect(new InetSocketAddress(serverHost, serverPort)).channel();
 //                    .connect(new InetSocketAddress("110ceee9.nat123.fun", 25574)).channel();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
@@ -88,18 +93,40 @@ public class MsgClient {
                         continue;
                     }
 
-                    String toPseudonym = commandLine;
+                    String rabblePseudonym = commandLine;
                     String notes = null;
 
                     int index = commandLine.indexOf(" ");
                     if (index == -1) {
 
                     } else {
-                        toPseudonym = commandLine.substring(0, index);
+                        rabblePseudonym = commandLine.substring(0, index);
                         notes = commandLine.substring(index + " ".length());
                     }
 
-                    msgClientHandler.inviteApply(toPseudonym, notes, channel);
+                    msgClientHandler.inviteApply(rabblePseudonym, notes, channel);
+
+                } else if (content.startsWith("invite_accept ")) {
+
+                    String commandLine = content.substring("invite_accept ".length()).trim();
+                    if (commandLine.length() == 0) {
+                        log.info("invite_accept NO ONE");
+                        continue;
+                    }
+
+                    String acceptPseudonym = commandLine;
+                    String notes = null;
+
+                    int index = commandLine.indexOf(" ");
+                    if (index == -1) {
+
+                    } else {
+                        acceptPseudonym = commandLine.substring(0, index);
+                        notes = commandLine.substring(index + " ".length());
+                    }
+
+                    msgClientHandler.inviteAccept(acceptPseudonym, channel);
+
                 }
             }
         } finally {

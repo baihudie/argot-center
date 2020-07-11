@@ -3,10 +3,8 @@ package com.baihudie.api.proto.body;
 import lombok.Data;
 
 @Data
-public class InviteApplyReqBody {
+public class TcpStep3ResBody {
 
     private String rabblePseudonym;
-
-    private String notes;
 
 }

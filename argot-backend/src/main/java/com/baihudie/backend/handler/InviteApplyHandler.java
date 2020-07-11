@@ -5,10 +5,10 @@ import com.baihudie.api.constants.ArgotType;
 import com.baihudie.api.proto.body.InviteApplyFromResBody;
 import com.baihudie.api.proto.body.InviteApplyReqBody;
 import com.baihudie.api.proto.body.InviteApplyToResBody;
+import com.baihudie.api.utils.ApiConstants;
 import com.baihudie.backend.constants.ArgotErrorCode;
 import com.baihudie.backend.constants.ArgotException;
 import com.baihudie.backend.entity.BanditEntity;
-import com.baihudie.backend.pipe.MessageBody;
 import com.baihudie.backend.pipe.PipeBodyMsg;
 import com.baihudie.backend.pipe.PipeHandlerDispatcher;
 import org.springframework.stereotype.Component;
@@ -20,61 +20,45 @@ public class InviteApplyHandler extends PipeHandlerDispatcher {
 
 
         InviteApplyReqBody reqBody = JSON.parseObject(body, InviteApplyReqBody.class);
-        String toPseudonym = reqBody.getToPseudonym();
-        if (toPseudonym == null || toPseudonym.length() == 0) {
+        String rabblePseudonym = reqBody.getRabblePseudonym();
+        if (rabblePseudonym == null || rabblePseudonym.length() == 0) {
             throw new ArgotException(ArgotErrorCode.PSEUDONYM_NULL, "toPseudonym is NULL.");
         }
 
-        PipeBodyMsg pipeBody = new PipeBodyMsg(PipeBodyMsg.SEND_TO_LIST);
+        BanditEntity originBanditEntity = pseudonymMap.get(pseudonym);
+        BanditEntity rabbleBanditEntity = pseudonymMap.get(rabblePseudonym);
 
-        BanditEntity fromBanditEntity = pseudonymMap.get(pseudonym);
-        BanditEntity toBanditEntity = pseudonymMap.get(toPseudonym);
-
-        if (fromBanditEntity == null) {
+        if (originBanditEntity == null) {
             throw new ArgotException(ArgotErrorCode.PSEUDONYM_NULL, "InviteApplyHandler,from pseudonym is NULL");
         }
 
-        if (toBanditEntity == null) {
 
-            MessageBody messageBody = new MessageBody();
-            messageBody.setResType(ArgotType.RES_INVITE_APPLY_FROM);
-            messageBody.setPseudonym(pseudonym);
+        PipeBodyMsg pipeBody = new PipeBodyMsg(PipeBodyMsg.SEND_TO_LIST);
+
+        if (rabbleBanditEntity == null) {
 
             InviteApplyFromResBody resFromBody = new InviteApplyFromResBody();
 
-            resFromBody.setToPseudonym(toPseudonym);
-            resFromBody.setInviteResult(InviteApplyFromResBody.RESULT_NOT_SET);
+            resFromBody.setRabblePseudonym(rabblePseudonym);
+            resFromBody.setInviteResult(ApiConstants.ERROR);
 
-            messageBody.setBody(JSON.toJSONString(resFromBody));
-
-            pipeBody.addMessageBody(messageBody);
+            pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_APPLY_FROM, JSON.toJSONString(resFromBody));
 
         } else {
 
-            MessageBody fromMessageBody = new MessageBody();
-            fromMessageBody.setResType(ArgotType.RES_INVITE_APPLY_FROM);
-            fromMessageBody.setPseudonym(pseudonym);
-
             InviteApplyFromResBody resFromBody = new InviteApplyFromResBody();
-            resFromBody.setInviteResult(InviteApplyFromResBody.RESULT_SEND_TO);
-            resFromBody.setToPseudonym(toPseudonym);
+            resFromBody.setInviteResult(ApiConstants.SUCCESS);
+            resFromBody.setRabblePseudonym(rabblePseudonym);
 
-            fromMessageBody.setBody(JSON.toJSONString(resFromBody));
-            pipeBody.addMessageBody(fromMessageBody);
+            pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_APPLY_FROM, JSON.toJSONString(resFromBody));
 
-            //
-            MessageBody toMessageBody = new MessageBody();
-            toMessageBody.setResType(ArgotType.RES_INVITE_APPLY_TO);
-            toMessageBody.setPseudonym(toPseudonym);
 
             InviteApplyToResBody resToBody = new InviteApplyToResBody();
-            resToBody.setFromPseudonym(pseudonym);
-            resToBody.setFromGoodName(fromBanditEntity.getGoodName());
+            resToBody.setOriginPseudonym(pseudonym);
+            resToBody.setOriginGoodName(originBanditEntity.getGoodName());
             resToBody.setNotes(reqBody.getNotes());
 
-            toMessageBody.setBody(JSON.toJSONString(resToBody));
-
-            pipeBody.addMessageBody(toMessageBody);
+            pipeBody.addMessageBody(rabblePseudonym, ArgotType.RES_INVITE_APPLY_TO, JSON.toJSONString(resToBody));
         }
         return pipeBody;
     }

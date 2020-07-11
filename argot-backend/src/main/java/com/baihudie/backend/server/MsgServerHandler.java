@@ -49,10 +49,13 @@ public class MsgServerHandler extends ChannelInboundHandlerAdapter {
 
             routeCon(ctx, req);
 
-
-        } else if (reqType > ArgotType.MAX_REQ_CON) {
+        } else if (reqType > ArgotType.MAX_REQ_CON
+                && reqType < ArgotType.MAX_REQ_MSG) {
 
             routeMsg(ctx, req);
+        } else if (reqType > ArgotType.MAX_REQ_MSG) {
+
+            routeAuto(ctx, req);
         }
 
     }
@@ -66,7 +69,6 @@ public class MsgServerHandler extends ChannelInboundHandlerAdapter {
 
         Attribute<String> attrPseudonym = ctx.attr(ATTR_KEY_PSEUDONYM);
         Attribute<Integer> attrSeq = ctx.attr(ATTR_KEY_SEQ);
-
 
         String pseudonym = req.getPseudonym();
 
@@ -141,6 +143,45 @@ public class MsgServerHandler extends ChannelInboundHandlerAdapter {
         }
 
         sendMessageBodyList(pseudonym, channel, sendTo, messageBodyList);
+    }
+
+    private void routeAuto(ChannelHandlerContext ctx, ArgotReqProto.ArgotReq req) {
+
+        Channel channel = ctx.channel();
+        Attribute<String> channelAttr = ctx.attr(ATTR_KEY_PSEUDONYM);
+
+        String pseudonym = req.getPseudonym();
+        if (pseudonym == null) {
+            closeCtx(ctx);
+            return;
+        }
+        String attrPseudonym = channelAttr.get();
+        if (attrPseudonym == null) {
+            closeCtx(ctx);
+            return;
+        }
+        if (!attrPseudonym.equals(pseudonym)) {
+            closeCtx(ctx);
+            return;
+        }
+
+        PipeBodyAuto handlerBody = null;
+        int sendTo = PipeBodyMsg.SEND_TO_NULL;
+        List<MessageBody> messageBodyList = null;
+
+        try {
+            handlerBody = bodyService.genAutoPipeBody(channel, pseudonym, req.getReqType(), req.getBody());
+            sendTo = handlerBody.getSendTo();
+            messageBodyList = handlerBody.getMessageBodyList();
+
+        } catch (Exception ex) {
+            log.error("message from pseudonym:" + pseudonym + "genMessageBody req:" + req + " , ERR:" + ex.getMessage(), ex);
+            sendExceptionMessage(pseudonym, channel, ex);
+            return;
+        }
+
+        sendMessageBodyList(pseudonym, channel, sendTo, messageBodyList);
+
     }
 
     private void sendExceptionMessage(String pseudonym, Channel channel, Exception ex) {

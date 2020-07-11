@@ -4,9 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
 import com.baihudie.api.proto.ArgotReqProto;
 import com.baihudie.api.proto.ArgotResProto;
-import com.baihudie.api.proto.body.ActiveReqBody;
-import com.baihudie.api.proto.body.ChatsReqBody;
-import com.baihudie.api.proto.body.InviteApplyReqBody;
+import com.baihudie.api.proto.body.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -26,31 +24,16 @@ public class MsgClientHandler extends ChannelInboundHandlerAdapter {
     private String pseudonym;
     private int status;
 
-    private ClientProxy clientProxy;
+    private ServerProxy clientProxy;
+    private P2pProxy p2pProxy;
 
     public MsgClientHandler(String banditCode, String goodName) {
 
         status = STATUS_INIT;
 
-        clientProxy = new ClientProxy(banditCode, goodName);
-    }
+        clientProxy = new ServerProxy(banditCode, goodName);
 
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-
-        ArgotReqProto.ArgotReq.Builder builder = ArgotReqProto.ArgotReq.newBuilder();
-
-        builder.setReqSeq(index);
-        builder.setReqType(ArgotType.REQ_ACTIVE);
-
-        ActiveReqBody body = clientProxy.genReqActiveBody();
-
-        builder.setBody(JSON.toJSONString(body));
-
-        ArgotReqProto.ArgotReq req = builder.build();
-        log.info("channel write and flush: " + req.toString());
-        ctx.write(req);
-        ctx.flush();
+        p2pProxy = new P2pProxy(clientProxy);
     }
 
 
@@ -80,70 +63,120 @@ public class MsgClientHandler extends ChannelInboundHandlerAdapter {
 
             } else if (ArgotType.RES_INVITE_APPLY_FROM == resType) {
 
-                clientProxy.handleInviteFrom(res);
+                clientProxy.handleInviteApplyFrom(res);
 
             } else if (ArgotType.RES_INVITE_APPLY_TO == resType) {
 
-                clientProxy.handleInviteTo(res);
+                clientProxy.handleInviteApplyTo(res);
+
+            } else if (ArgotType.RES_INVITE_ACCEPT_FROM == resType) {
+
+                clientProxy.handleInviteAcceptFrom(res);
+
+            } else if (ArgotType.RES_INVITE_ACCEPT_TO == resType) {
+
+                //进入自动化流程
+
+                String rabblePseudonym = clientProxy.handleInviteAcceptTo(res);
+                if (rabblePseudonym != null && rabblePseudonym.length() > 0) {
+                    //TCP连接
+                    p2pProxy.initStep1(rabblePseudonym);
+                    tcpStep1(ctx, rabblePseudonym);
+                }
+
+            } else if (ArgotType.RES_TCP_STEP_1_FROM == resType) {
+
+                log.info(" create new SOCKET.");
+                //TODO create new SOCKET.
+
+            } else if (ArgotType.RES_TCP_STEP_1_TO == resType) {
+
+                String originPseudonym = clientProxy.handleTcpStep1To(res);
+                if (originPseudonym != null && originPseudonym.length() > 0) {
+                    //TCP连接
+                    p2pProxy.step1to(originPseudonym);
+                    tcpStep2(ctx, originPseudonym);
+                }
+
+            } else if (ArgotType.RES_TCP_STEP_2_FROM == resType) {
+
+                log.info(" create new SOCKET.");
+                //TODO create new SOCKET.
+
+            } else if (ArgotType.RES_TCP_STEP_2_TO == resType) {
+
+                String rabblePseudonym = clientProxy.handleTcpStep2To(res);
+
+                p2pProxy.step2to(rabblePseudonym);
 
             }
         } catch (Exception ex) {
-            log.error("ACTIVE ERROR:" + ex.getMessage(), ex);
+            log.error("READ ERROR:" + ex.getMessage(), ex);
             if (needClose) {
                 ctx.close();
             }
         }
     }
 
+    private void tcpStep2(ChannelHandlerContext ctx, String originPseudonym) {
+        TcpStep2ReqBody body = clientProxy.genReqTcpStep2Body(originPseudonym);
+        sendMessage(JSON.toJSONString(body), ctx.channel(), ArgotType.REQ_TCP_STEP_2);
+
+    }
+
+    private void tcpStep1(ChannelHandlerContext cxt, String rabblePseudonym) {
+
+        TcpStep1ReqBody body = clientProxy.genReqTcpStep1Body(rabblePseudonym);
+        sendMessage(JSON.toJSONString(body), cxt.channel(), ArgotType.REQ_TCP_STEP_1);
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+
+        ActiveReqBody body = clientProxy.genReqActiveBody();
+        sendMessage(JSON.toJSONString(body), ctx.channel(), ArgotType.REQ_ACTIVE);
+    }
 
     public void chats(String content, Channel channel) throws IOException {
 
-        ArgotReqProto.ArgotReq.Builder builder = ArgotReqProto.ArgotReq.newBuilder();
-        index++;
-        builder.setReqSeq(index);
-        builder.setPseudonym(pseudonym);
-        builder.setReqType(ArgotType.REQ_CHATS);
-
         ChatsReqBody body = clientProxy.genReqChatAllBody(content);
-
-        builder.setBody(JSON.toJSONString(body));
-        ArgotReqProto.ArgotReq req = builder.build();
-
-        log.info("channel write and flush: " + req.toString());
-        channel.writeAndFlush(req);
+        sendMessage(JSON.toJSONString(body), channel, ArgotType.REQ_CHATS);
     }
 
     public void who(Channel channel) {
 
-        ArgotReqProto.ArgotReq.Builder builder = ArgotReqProto.ArgotReq.newBuilder();
-        index++;
-        builder.setReqSeq(index);
-        builder.setPseudonym(pseudonym);
-        builder.setReqType(ArgotType.REQ_QUERY_ALL);
-
-        ArgotReqProto.ArgotReq req = builder.build();
-
-        log.info("channel write and flush: " + req.toString());
-        channel.writeAndFlush(req);
+        sendMessage("", channel, ArgotType.REQ_QUERY_ALL);
     }
 
-    public void inviteApply(String toPseudonym, String notes, Channel channel) {
-
-        ArgotReqProto.ArgotReq.Builder builder = ArgotReqProto.ArgotReq.newBuilder();
-        index++;
-        builder.setReqSeq(index);
-        builder.setPseudonym(pseudonym);
-        builder.setReqType(ArgotType.REQ_INVITE_APPLY);
+    public void inviteApply(String rabblePseudonym, String notes, Channel channel) {
 
         if (notes == null || notes.length() == 0) {
             notes = "hi";
         }
-        InviteApplyReqBody body = clientProxy.genReqConApplyBody(toPseudonym, notes);
-        builder.setBody(JSON.toJSONString(body));
+        InviteApplyReqBody body = clientProxy.genReqInviteApplyBody(rabblePseudonym, notes);
+        sendMessage(JSON.toJSONString(body), channel, ArgotType.REQ_INVITE_APPLY);
+    }
 
+
+    public void inviteAccept(String acceptPseudonym, Channel channel) {
+
+        InviteAcceptReqBody body = clientProxy.genReqInviteAcceptBody(acceptPseudonym);
+        sendMessage(JSON.toJSONString(body), channel, ArgotType.REQ_INVITE_ACCEPT);
+    }
+
+
+    private void sendMessage(String body, Channel channel, int reqType) {
+        ArgotReqProto.ArgotReq.Builder builder = ArgotReqProto.ArgotReq.newBuilder();
+        index++;
+        builder.setReqSeq(index);
+        if (pseudonym != null) {
+            builder.setPseudonym(pseudonym);
+        }
+        builder.setReqType(reqType);
+        builder.setBody(body);
         ArgotReqProto.ArgotReq req = builder.build();
 
-        log.info("channel write and flush: " + req.toString());
+        log.info("SEND: " + req.toString());
         channel.writeAndFlush(req);
     }
 
