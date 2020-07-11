@@ -56,7 +56,7 @@ public class MsgServer {
                         }
                     });
 
-            f = bootstrap.bind(8083).sync();//阻塞端口号，以及同步策略
+            f = bootstrap.bind(4685).sync();//阻塞端口号，以及同步策略
             f.channel().closeFuture().sync();//关闭通道
         } catch (InterruptedException e) {
             e.printStackTrace();

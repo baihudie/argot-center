@@ -1,13 +1,11 @@
 package com.baihudie.backend.server;
 
-import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
 import com.baihudie.api.proto.ArgotReqProto;
 import com.baihudie.api.proto.ArgotResProto;
-import com.baihudie.api.proto.body.ReqActiveBody;
 import com.baihudie.backend.constants.ArgotErrorCode;
-import com.baihudie.backend.entity.ControlBody;
-import com.baihudie.backend.entity.MessageBody;
+import com.baihudie.backend.constants.ArgotException;
+import com.baihudie.backend.pipe.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,7 +33,7 @@ public class MsgServerHandler extends ChannelInboundHandlerAdapter {
     private Map<String, Channel> channelMap = new ConcurrentHashMap<>(2000);
 
     @Autowired
-    private MsgBodyService msgBodyService;
+    private PipeHandlerDispatcher bodyService;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg)
@@ -44,17 +42,67 @@ public class MsgServerHandler extends ChannelInboundHandlerAdapter {
         log.info("channel read :" + msg.toString());
 
         ArgotReqProto.ArgotReq req = (ArgotReqProto.ArgotReq) msg;
-
         int reqType = req.getReqType();
-        if (ArgotType.REQ_ACTIVE == reqType) {
 
-            routeConActive(ctx, req);
+        if (reqType > ArgotType.MIN_REQ_CON
+                && reqType < ArgotType.MAX_REQ_CON) {
+
+            routeCon(ctx, req);
 
 
         } else if (reqType > ArgotType.MAX_REQ_CON) {
 
             routeMsg(ctx, req);
         }
+
+    }
+
+
+    private void routeCon(ChannelHandlerContext ctx, ArgotReqProto.ArgotReq req) {
+
+//        int seq = req.getReqSeq();
+//        String body = req.getBody();
+        Channel channel = ctx.channel();
+
+        Attribute<String> attrPseudonym = ctx.attr(ATTR_KEY_PSEUDONYM);
+        Attribute<Integer> attrSeq = ctx.attr(ATTR_KEY_SEQ);
+
+
+        String pseudonym = req.getPseudonym();
+
+        PipeBodyCon handlerBody = null;
+
+        try {
+            handlerBody = bodyService.genConPipeBody(pseudonym, req.getReqType(), req.getBody());
+
+        } catch (Exception ex) {
+            log.error("REQ_CON error:" + req + ", ERR:" + ex.getMessage(), ex);
+            closeCtx(ctx);
+            return;
+        }
+
+        //控制平面
+        int conType = handlerBody.getConType();
+        if (conType == PipeBodyCon.CON_ACTIVE) {
+
+            if (channelMap.containsValue(ctx.channel())) {
+                closeCtx(ctx);
+                return;
+            }
+
+            ControlBody controlBody = handlerBody.getControlBody();
+            String newPseudonym = controlBody.getPseudonym();
+            Attribute<String> channelAttr = ctx.attr(ATTR_KEY_PSEUDONYM);
+            channelAttr.set(newPseudonym);
+
+            channelMap.put(newPseudonym, channel);
+            pseudonym = newPseudonym;
+        }
+
+        //信息平面
+        int sendTo = handlerBody.getSendTo();
+        List<MessageBody> messageBodyList = handlerBody.getMessageBodyList();
+        sendMessageBodyList(pseudonym, channel, sendTo, messageBodyList);
 
     }
 
@@ -77,47 +125,97 @@ public class MsgServerHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        MessageBody messageBody = null;
+        PipeBodyMsg handlerBody = null;
+        int sendTo = PipeBodyMsg.SEND_TO_NULL;
+        List<MessageBody> messageBodyList = null;
 
         try {
-            messageBody = msgBodyService.genMessageBody(pseudonym, req.getReqType(), req.getBody());
+            handlerBody = bodyService.genMsgPipeBody(pseudonym, req.getReqType(), req.getBody());
+            sendTo = handlerBody.getSendTo();
+            messageBodyList = handlerBody.getMessageBodyList();
 
         } catch (Exception ex) {
             log.error("message from pseudonym:" + pseudonym + "genMessageBody req:" + req + " , ERR:" + ex.getMessage(), ex);
+            sendExceptionMessage(pseudonym, channel, ex);
             return;
         }
 
+        sendMessageBodyList(pseudonym, channel, sendTo, messageBodyList);
+    }
 
-        int sendTo = messageBody.getSendTo();
-        if (sendTo == MessageBody.TO_NULL) {
+    private void sendExceptionMessage(String pseudonym, Channel channel, Exception ex) {
+
+        try {
+            if (channel == null) {
+                return;
+            }
+
+            Integer seq = getNextSeq(channel);
+
+            int resCode = ArgotErrorCode.SYS_ERROR;
+            String messsage = ex.getMessage();
+
+            if (ex instanceof ArgotException) {
+                ArgotException aex = (ArgotException) ex;
+                resCode = aex.getErrorCode();
+                messsage = aex.getMessage();
+            }
+
+            ArgotResProto.ArgotRes.Builder builder = ArgotResProto.ArgotRes.newBuilder();
+
+            builder.setResSeq(seq);
+            builder.setResCode(resCode);
+            builder.setResMsg(messsage);
+            builder.setResType(ArgotType.RES_ARGOT_ERROR);
+
+            ArgotResProto.ArgotRes res = builder.build();
+            log.info("channel write and flush: " + res.toString());
+            channel.writeAndFlush(res);
+
+        } catch (Exception exception) {
+
+            log.error("sendExceptionMessage to pseudonym:" + channel + ", ERR:" + ex.getMessage(), ex);
+        }
+
+    }
+
+    private void sendMessageBodyList(String pseudonym, Channel channel, int sendTo, List<MessageBody> messageBodyList) {
+
+        if (sendTo == PipeBodyMsg.SEND_TO_NULL) {
 
             return;
-        } else if (sendTo == MessageBody.TO_SELF) {
+        } else if (sendTo == PipeBodyMsg.SEND_TO_SELF) {
 
-            sendMesTo(pseudonym, channel, messageBody.getResType(), messageBody.getBody());
-
-        } else if (sendTo == MessageBody.TO_ONE) {
-
-            String pseudonymsOne = messageBody.getPseudonymsOne();
-            Channel channelOne = channelMap.get(pseudonymsOne);
-            sendMesTo(pseudonymsOne, channelOne, messageBody.getResType(), messageBody.getBody());
-
-        } else if (sendTo == MessageBody.TO_LIST) {
-
-            List<String> pseudonymsList = messageBody.getPseudonymsList();
-            if (pseudonymsList != null && pseudonymsList.size() > 0) {
-                for (String pseudonymsOne : pseudonymsList) {
-                    Channel channelOne = channelMap.get(pseudonymsOne);
-                    sendMesTo(pseudonymsOne, channelOne, messageBody.getResType(), messageBody.getBody());
+            if (messageBodyList != null && messageBodyList.size() > 0) {
+                for (MessageBody messageBody : messageBodyList) {
+                    sendMesTo(pseudonym, channel, messageBody.getResType(), messageBody.getBody());
                 }
             }
-        } else if (sendTo == MessageBody.TO_ALL) {
-            Set<Map.Entry<String, Channel>> entrySet = channelMap.entrySet();
-            for (Map.Entry<String, Channel> entry : entrySet) {
-                String pseudonymsOne = entry.getKey();
-                Channel channelOne = entry.getValue();
 
-                sendMesTo(pseudonymsOne, channelOne, messageBody.getResType(), messageBody.getBody());
+        } else if (sendTo == PipeBodyMsg.SEND_TO_LIST) {
+
+            if (messageBodyList != null && messageBodyList.size() > 0) {
+                for (MessageBody messageBody : messageBodyList) {
+                    String pseudonymOne = messageBody.getPseudonym();
+                    Channel channelOne = channelMap.get(pseudonymOne);
+                    sendMesTo(pseudonym, channelOne, messageBody.getResType(), messageBody.getBody());
+                }
+            }
+
+        } else if (sendTo == PipeBodyMsg.SEND_TO_ALL) {
+
+            if (messageBodyList != null && messageBodyList.size() > 0) {
+
+                Set<Map.Entry<String, Channel>> entrySet = channelMap.entrySet();
+                for (Map.Entry<String, Channel> entry : entrySet) {
+
+                    String pseudonymOne = entry.getKey();
+                    Channel channelOne = entry.getValue();
+
+                    for (MessageBody messageBody : messageBodyList) {
+                        sendMesTo(pseudonymOne, channelOne, messageBody.getResType(), messageBody.getBody());
+                    }
+                }
             }
         }
 
@@ -133,7 +231,6 @@ public class MsgServerHandler extends ChannelInboundHandlerAdapter {
 
             ArgotResProto.ArgotRes.Builder builder = ArgotResProto.ArgotRes.newBuilder();
 
-
             builder.setResSeq(seq);
             builder.setResCode(ArgotErrorCode.SUCCESS);
             builder.setResType(resType);
@@ -146,52 +243,6 @@ public class MsgServerHandler extends ChannelInboundHandlerAdapter {
         } catch (Exception ex) {
 
             log.error("chatAll to pseudonym:" + channel + ", ERR:" + ex.getMessage(), ex);
-        }
-    }
-
-    private void routeConActive(ChannelHandlerContext ctx, ArgotReqProto.ArgotReq req) {
-
-        int seq = req.getReqSeq();
-        String body = req.getBody();
-
-        //validate
-
-        Channel channel = ctx.channel();
-        if (channelMap.containsValue(ctx.channel())) {
-            closeCtx(ctx);
-            return;
-        }
-
-        Attribute<String> attrPseudonym = ctx.attr(ATTR_KEY_PSEUDONYM);
-        Attribute<Integer> attrSeq = ctx.attr(ATTR_KEY_SEQ);
-
-        try {
-
-            ReqActiveBody reqBody = JSON.parseObject(body, ReqActiveBody.class);
-            ControlBody controlBody = msgBodyService.genResActiveBody(reqBody);
-
-            String pseudonym = controlBody.getControlMsg();
-
-            channelMap.put(pseudonym, channel);
-            attrPseudonym.set(pseudonym);
-            attrSeq.set(0);
-
-            ArgotResProto.ArgotRes.Builder builder = ArgotResProto.ArgotRes.newBuilder();
-
-            builder.setResSeq(attrSeq.get());
-            builder.setResCode(ArgotErrorCode.SUCCESS);
-            builder.setResType(ArgotType.RES_ACTIVE);
-            builder.setBody(controlBody.getBody());
-
-            ArgotResProto.ArgotRes res = builder.build();
-
-            log.info("channel write and flush: " + res.toString());
-            ctx.writeAndFlush(res);
-
-        } catch (Exception ex) {
-            log.error("REQ_ACTIVE error:" + req + ", ERR:" + ex.getMessage(), ex);
-            closeCtx(ctx);
-            return;
         }
     }
 
@@ -223,7 +274,7 @@ public class MsgServerHandler extends ChannelInboundHandlerAdapter {
         String pseudonym = channelAttr.get();
         if (pseudonym != null) {
             channelMap.remove(pseudonym);
-            msgBodyService.removePseudonym(pseudonym);
+            bodyService.removePseudonym(pseudonym);
         }
         ctx.close();
     }

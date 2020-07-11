@@ -4,103 +4,147 @@ import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
 import com.baihudie.api.proto.ArgotReqProto;
 import com.baihudie.api.proto.ArgotResProto;
-import com.baihudie.api.proto.body.ReqActiveBody;
-import com.baihudie.api.proto.body.ReqChatAllBody;
-import com.baihudie.backend.client.MsgClientService;
+import com.baihudie.api.proto.body.ActiveReqBody;
+import com.baihudie.api.proto.body.ChatsReqBody;
+import com.baihudie.api.proto.body.InviteApplyReqBody;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 
 @Slf4j
+@Data
 public class MsgClientHandler extends ChannelInboundHandlerAdapter {
 
-    private int STATUS_INIT = 0;
-    private int STATUS_ACTIVE = 1;
+    public static final int STATUS_INIT = 0;
+    public static final int STATUS_ACTIVE = 1;
 
     private int index = 0;
     private String pseudonym;
     private int status;
-    private ArgotReqProto.ArgotReq.Builder builder;
 
-    private MsgClientService msgClientService;
+    private ClientProxy clientProxy;
 
-    public MsgClientHandler(String banditCode) {
+    public MsgClientHandler(String banditCode, String goodName) {
+
         status = STATUS_INIT;
 
-        builder = ArgotReqProto.ArgotReq.newBuilder();
-
-        msgClientService = new MsgClientService(banditCode);
+        clientProxy = new ClientProxy(banditCode, goodName);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
 
+        ArgotReqProto.ArgotReq.Builder builder = ArgotReqProto.ArgotReq.newBuilder();
+
         builder.setReqSeq(index);
         builder.setReqType(ArgotType.REQ_ACTIVE);
 
-        ReqActiveBody body = msgClientService.genReqActiveBody();
+        ActiveReqBody body = clientProxy.genReqActiveBody();
 
         builder.setBody(JSON.toJSONString(body));
 
         ArgotReqProto.ArgotReq req = builder.build();
-        log.info("channel write and flush: "+req.toString());
+        log.info("channel write and flush: " + req.toString());
         ctx.write(req);
         ctx.flush();
     }
 
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        System.exit(0);
-    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg)
             throws Exception {
         log.info("Receive server response : [" + msg + "]");
+        boolean needClose = false;
         try {
             ArgotResProto.ArgotRes res = (ArgotResProto.ArgotRes) msg;
             int resType = res.getResType();
             if (ArgotType.RES_ACTIVE == resType) {
 
-                String pseudonym = msgClientService.handleResActive(res);
+                needClose = true;
+                String pseudonym = clientProxy.handleResActive(res);
+
                 this.pseudonym = pseudonym;
                 this.status = STATUS_ACTIVE;
 
-            } else if (ArgotType.RES_CHAT_ALL == resType) {
+            } else if (ArgotType.RES_QUERY_ALL == resType) {
 
-                msgClientService.handleResChat(res);
+                clientProxy.handleResQueryAll(res);
+
+            } else if (ArgotType.RES_CHATS == resType) {
+
+                clientProxy.handleResChats(res);
+
+            } else if (ArgotType.RES_INVITE_APPLY_FROM == resType) {
+
+                clientProxy.handleInviteFrom(res);
+
+            } else if (ArgotType.RES_INVITE_APPLY_TO == resType) {
+
+                clientProxy.handleInviteTo(res);
+
             }
         } catch (Exception ex) {
             log.error("ACTIVE ERROR:" + ex.getMessage(), ex);
-            ctx.close();
+            if (needClose) {
+                ctx.close();
+            }
         }
     }
 
 
+    public void chats(String content, Channel channel) throws IOException {
 
-
-    public void chat(String content, Channel channel) throws IOException {
-        if (status == STATUS_INIT) {
-            log.info("status is STATUS_INIT");
-            return;
-        }
-
+        ArgotReqProto.ArgotReq.Builder builder = ArgotReqProto.ArgotReq.newBuilder();
         index++;
         builder.setReqSeq(index);
         builder.setPseudonym(pseudonym);
-        builder.setReqType(ArgotType.REQ_CHAT_ALL);
+        builder.setReqType(ArgotType.REQ_CHATS);
 
-        ReqChatAllBody body = msgClientService.genReqChatBody(content);
+        ChatsReqBody body = clientProxy.genReqChatAllBody(content);
 
         builder.setBody(JSON.toJSONString(body));
         ArgotReqProto.ArgotReq req = builder.build();
 
-        log.info("channel write and flush: "+req.toString());
+        log.info("channel write and flush: " + req.toString());
         channel.writeAndFlush(req);
+    }
 
+    public void who(Channel channel) {
+
+        ArgotReqProto.ArgotReq.Builder builder = ArgotReqProto.ArgotReq.newBuilder();
+        index++;
+        builder.setReqSeq(index);
+        builder.setPseudonym(pseudonym);
+        builder.setReqType(ArgotType.REQ_QUERY_ALL);
+
+        ArgotReqProto.ArgotReq req = builder.build();
+
+        log.info("channel write and flush: " + req.toString());
+        channel.writeAndFlush(req);
+    }
+
+    public void inviteApply(String toPseudonym, String notes, Channel channel) {
+
+        ArgotReqProto.ArgotReq.Builder builder = ArgotReqProto.ArgotReq.newBuilder();
+        index++;
+        builder.setReqSeq(index);
+        builder.setPseudonym(pseudonym);
+        builder.setReqType(ArgotType.REQ_INVITE_APPLY);
+
+        if (notes == null || notes.length() == 0) {
+            notes = "hi";
+        }
+        InviteApplyReqBody body = clientProxy.genReqConApplyBody(toPseudonym, notes);
+        builder.setBody(JSON.toJSONString(body));
+
+        ArgotReqProto.ArgotReq req = builder.build();
+
+        log.info("channel write and flush: " + req.toString());
+        channel.writeAndFlush(req);
     }
 
     @Override
@@ -116,5 +160,13 @@ public class MsgClientHandler extends ChannelInboundHandlerAdapter {
         ctx.close();
         System.exit(0);
     }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+        ctx.close();
+        System.exit(0);
+    }
+
 
 }

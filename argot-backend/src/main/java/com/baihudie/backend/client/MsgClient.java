@@ -32,8 +32,9 @@ public class MsgClient {
                 .toString();
 
         log.info("banditCode:" + banditCode);
+        String goodName = "kitty";
 
-        MsgClientHandler msgClientHandler = new MsgClientHandler(banditCode);
+        MsgClientHandler msgClientHandler = new MsgClientHandler(banditCode, goodName);
 
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
         try {
@@ -58,16 +59,64 @@ public class MsgClient {
                              }
 
                     )
-                    .connect(new InetSocketAddress("localhost", 8083)).channel();
+                    .connect(new InetSocketAddress("localhost", 4685)).channel();
+//                    .connect(new InetSocketAddress("110ceee9.nat123.fun", 25574)).channel();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
             while (true) {
                 String content = reader.readLine();
-                msgClientHandler.chat(content, channel);
+
+                boolean boo = validateActive(msgClientHandler);
+                if (!boo) {
+                    log.info("status is STATUS_INIT");
+                    break;
+                }
+
+                if (content.startsWith("who")) {
+
+                    msgClientHandler.who(channel);
+
+                } else if (content.startsWith("chats ")) {
+
+                    msgClientHandler.chats(content.substring("chats ".length()), channel);
+
+                } else if (content.startsWith("invite_apply ")) {
+
+                    String commandLine = content.substring("invite_apply ".length()).trim();
+                    if (commandLine.length() == 0) {
+                        log.info("invite_apply NO ONE");
+                        continue;
+                    }
+
+                    String toPseudonym = commandLine;
+                    String notes = null;
+
+                    int index = commandLine.indexOf(" ");
+                    if (index == -1) {
+
+                    } else {
+                        toPseudonym = commandLine.substring(0, index);
+                        notes = commandLine.substring(index + " ".length());
+                    }
+
+                    msgClientHandler.inviteApply(toPseudonym, notes, channel);
+                }
             }
         } finally {
             eventLoopGroup.shutdownGracefully();
         }
+    }
+
+    private static boolean validateActive(MsgClientHandler msgClientHandler) {
+
+        boolean boo = false;
+
+        int status = msgClientHandler.getStatus();
+        if (status == MsgClientHandler.STATUS_ACTIVE) {
+            boo = true;
+        }
+
+        return boo;
     }
 
 }

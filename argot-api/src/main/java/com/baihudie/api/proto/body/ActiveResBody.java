@@ -3,7 +3,8 @@ package com.baihudie.api.proto.body;
 import lombok.Data;
 
 @Data
-public class ReqChatAllBody {
+public class ActiveResBody {
 
-    private String content;
+    private String pseudonym;
+
 }

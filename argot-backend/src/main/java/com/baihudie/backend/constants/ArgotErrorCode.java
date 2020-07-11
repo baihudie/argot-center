@@ -9,8 +9,13 @@ public interface ArgotErrorCode {
     //server
     int BANDIT_CODE_NULL = 1000;
     int BANDIT_CODE_EXIST = 1001;
+    int REQ_TYPE_NOT_SUPPORT = 1002;
+    int PSEUDONYM_NOT_NULL = 1003;
+    int PSEUDONYM_NULL = 1004;
+
+
 
     //client
-    int PSEUDONYM_NULL = 2001;
-    int REQ_TYPE_NOT_SUPPORT = 2002;
+    int CLI_PSEUDONYM_NULL = 2001;
+
 }
