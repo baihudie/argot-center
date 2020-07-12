@@ -5,6 +5,7 @@ import com.baihudie.api.constants.ArgotType;
 import com.baihudie.api.proto.ArgotReqProto;
 import com.baihudie.api.proto.ArgotResProto;
 import com.baihudie.api.proto.body.*;
+import com.baihudie.api.utils.ApiConstants;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -22,18 +23,18 @@ public class MsgClientHandler extends ChannelInboundHandlerAdapter {
 
     private int index = 0;
     private String pseudonym;
+    private String banditCode;
     private int status;
 
-    private ServerProxy clientProxy;
-    private P2pProxy p2pProxy;
+    private ClientProxy clientProxy;
+//    private P2pProxy p2pProxy;
 
     public MsgClientHandler(String banditCode, String goodName) {
-
+        this.banditCode = banditCode;
         status = STATUS_INIT;
 
-        clientProxy = new ServerProxy(banditCode, goodName);
-
-        p2pProxy = new P2pProxy(clientProxy);
+        clientProxy = new ClientProxy(banditCode, goodName);
+//        p2pProxy = new P2pProxy(clientProxy);
     }
 
 
@@ -45,69 +46,72 @@ public class MsgClientHandler extends ChannelInboundHandlerAdapter {
         try {
             ArgotResProto.ArgotRes res = (ArgotResProto.ArgotRes) msg;
             int resType = res.getResType();
+            String body = res.getBody();
+
             if (ArgotType.RES_ACTIVE == resType) {
 
                 needClose = true;
-                String pseudonym = clientProxy.handleResActive(res);
+                String pseudonym = clientProxy.handleResActive(body);
 
                 this.pseudonym = pseudonym;
                 this.status = STATUS_ACTIVE;
 
             } else if (ArgotType.RES_QUERY_ALL == resType) {
 
-                clientProxy.handleResQueryAll(res);
+                clientProxy.handleResQueryAll(body);
 
             } else if (ArgotType.RES_CHATS == resType) {
 
-                clientProxy.handleResChats(res);
+                clientProxy.handleResChats(body);
 
-            } else if (ArgotType.RES_INVITE_APPLY_FROM == resType) {
+            } else if (ArgotType.RES_INVITE_FROM == resType) {
 
-                clientProxy.handleInviteApplyFrom(res);
+                clientProxy.handleInviteApplyFrom(body);
 
-            } else if (ArgotType.RES_INVITE_APPLY_TO == resType) {
+            } else if (ArgotType.RES_INVITE_TO == resType) {
 
-                clientProxy.handleInviteApplyTo(res);
+                clientProxy.handleInviteApplyTo(body);
 
-            } else if (ArgotType.RES_INVITE_ACCEPT_FROM == resType) {
+            } else if (ArgotType.RES_ACCEPT_FROM == resType) {
 
-                clientProxy.handleInviteAcceptFrom(res);
+                clientProxy.handleInviteAcceptFrom(body);
 
-            } else if (ArgotType.RES_INVITE_ACCEPT_TO == resType) {
+            } else if (ArgotType.RES_ACCEPT_TO == resType) {
 
                 //进入自动化流程
-
-                String rabblePseudonym = clientProxy.handleInviteAcceptTo(res);
-                if (rabblePseudonym != null && rabblePseudonym.length() > 0) {
-                    //TCP连接
-                    p2pProxy.initStep1(rabblePseudonym);
-                    tcpStep1(ctx, rabblePseudonym);
+                int result = clientProxy.handleInviteAcceptTo(body);
+                if (result != ApiConstants.SUCCESS) {
+                    return;
                 }
+                tcpStep1(ctx, body);
 
             } else if (ArgotType.RES_TCP_STEP_1_FROM == resType) {
 
-                log.info(" create new SOCKET.");
-                //TODO create new SOCKET.
+                int result = clientProxy.handleTcpStep1From(body);
 
             } else if (ArgotType.RES_TCP_STEP_1_TO == resType) {
 
-                String originPseudonym = clientProxy.handleTcpStep1To(res);
-                if (originPseudonym != null && originPseudonym.length() > 0) {
-                    //TCP连接
-                    p2pProxy.step1to(originPseudonym);
-                    tcpStep2(ctx, originPseudonym);
+                int result = clientProxy.handleTcpStep1To(body);
+                if (result != ApiConstants.SUCCESS) {
+                    return;
                 }
+                tcpStep2(ctx, body);
 
             } else if (ArgotType.RES_TCP_STEP_2_FROM == resType) {
 
-                log.info(" create new SOCKET.");
-                //TODO create new SOCKET.
+                int result = clientProxy.handleTcpStep2From(body);
+                if (result != ApiConstants.SUCCESS) {
+                    return;
+                }
+                log.info("LOG ===================== STEP 4");
 
             } else if (ArgotType.RES_TCP_STEP_2_TO == resType) {
 
-                String rabblePseudonym = clientProxy.handleTcpStep2To(res);
-
-                p2pProxy.step2to(rabblePseudonym);
+                int result = clientProxy.handleTcpStep2To(body);
+                if (result != ApiConstants.SUCCESS) {
+                    return;
+                }
+                log.info("LOG ===================== STEP 3");
 
             }
         } catch (Exception ex) {
@@ -118,17 +122,19 @@ public class MsgClientHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void tcpStep2(ChannelHandlerContext ctx, String originPseudonym) {
-        TcpStep2ReqBody body = clientProxy.genReqTcpStep2Body(originPseudonym);
-        sendMessage(JSON.toJSONString(body), ctx.channel(), ArgotType.REQ_TCP_STEP_2);
+    private void tcpStep1(ChannelHandlerContext cxt, String body) {
+
+        TcpStep1ReqBody reqBody = clientProxy.genReqTcpStep1Body(body);
+        sendMessage(JSON.toJSONString(reqBody), cxt.channel(), ArgotType.REQ_TCP_STEP_1);
+    }
+
+    private void tcpStep2(ChannelHandlerContext ctx, String body) {
+
+        TcpStep2ReqBody reqBody = clientProxy.genReqTcpStep2Body(body);
+        sendMessage(JSON.toJSONString(reqBody), ctx.channel(), ArgotType.REQ_TCP_STEP_2);
 
     }
 
-    private void tcpStep1(ChannelHandlerContext cxt, String rabblePseudonym) {
-
-        TcpStep1ReqBody body = clientProxy.genReqTcpStep1Body(rabblePseudonym);
-        sendMessage(JSON.toJSONString(body), cxt.channel(), ArgotType.REQ_TCP_STEP_1);
-    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -139,12 +145,13 @@ public class MsgClientHandler extends ChannelInboundHandlerAdapter {
 
     public void chats(String content, Channel channel) throws IOException {
 
-        ChatsReqBody body = clientProxy.genReqChatAllBody(content);
+        ChatsReqBody body = clientProxy.genReqChatsBody(content);
         sendMessage(JSON.toJSONString(body), channel, ArgotType.REQ_CHATS);
     }
 
-    public void who(Channel channel) {
+    public void queryAll(Channel channel) {
 
+        QueryAllReqBody body = clientProxy.genReqQueryAllBody();
         sendMessage("", channel, ArgotType.REQ_QUERY_ALL);
     }
 
@@ -153,15 +160,15 @@ public class MsgClientHandler extends ChannelInboundHandlerAdapter {
         if (notes == null || notes.length() == 0) {
             notes = "hi";
         }
-        InviteApplyReqBody body = clientProxy.genReqInviteApplyBody(rabblePseudonym, notes);
-        sendMessage(JSON.toJSONString(body), channel, ArgotType.REQ_INVITE_APPLY);
+        InviteReqBody body = clientProxy.genReqInviteApplyBody(rabblePseudonym, notes);
+        sendMessage(JSON.toJSONString(body), channel, ArgotType.REQ_INVITE);
     }
 
 
     public void inviteAccept(String acceptPseudonym, Channel channel) {
 
-        InviteAcceptReqBody body = clientProxy.genReqInviteAcceptBody(acceptPseudonym);
-        sendMessage(JSON.toJSONString(body), channel, ArgotType.REQ_INVITE_ACCEPT);
+        AcceptReqBody body = clientProxy.genReqInviteAcceptBody(acceptPseudonym);
+        sendMessage(JSON.toJSONString(body), channel, ArgotType.REQ_ACCEPT);
     }
 
 

@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Component
-public class WhoHandler extends PipeHandlerDispatcher {
+public class QueryAllHandler extends PipeHandlerDispatcher {
 
 
     public PipeBodyMsg genPipeBodyMsg(String pseudonym, int reqType, String body) {

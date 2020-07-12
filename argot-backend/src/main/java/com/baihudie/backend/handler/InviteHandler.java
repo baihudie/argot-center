@@ -2,9 +2,9 @@ package com.baihudie.backend.handler;
 
 import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
-import com.baihudie.api.proto.body.InviteApplyFromResBody;
-import com.baihudie.api.proto.body.InviteApplyReqBody;
-import com.baihudie.api.proto.body.InviteApplyToResBody;
+import com.baihudie.api.proto.body.InviteFromResBody;
+import com.baihudie.api.proto.body.InviteReqBody;
+import com.baihudie.api.proto.body.InviteToResBody;
 import com.baihudie.api.utils.ApiConstants;
 import com.baihudie.backend.constants.ArgotErrorCode;
 import com.baihudie.backend.constants.ArgotException;
@@ -14,12 +14,12 @@ import com.baihudie.backend.pipe.PipeHandlerDispatcher;
 import org.springframework.stereotype.Component;
 
 @Component
-public class InviteApplyHandler extends PipeHandlerDispatcher {
+public class InviteHandler extends PipeHandlerDispatcher {
 
     public PipeBodyMsg genPipeBodyMsg(String pseudonym, int reqType, String body) {
 
 
-        InviteApplyReqBody reqBody = JSON.parseObject(body, InviteApplyReqBody.class);
+        InviteReqBody reqBody = JSON.parseObject(body, InviteReqBody.class);
         String rabblePseudonym = reqBody.getRabblePseudonym();
         if (rabblePseudonym == null || rabblePseudonym.length() == 0) {
             throw new ArgotException(ArgotErrorCode.PSEUDONYM_NULL, "toPseudonym is NULL.");
@@ -37,28 +37,28 @@ public class InviteApplyHandler extends PipeHandlerDispatcher {
 
         if (rabbleBanditEntity == null) {
 
-            InviteApplyFromResBody resFromBody = new InviteApplyFromResBody();
+            InviteFromResBody resFromBody = new InviteFromResBody();
 
             resFromBody.setRabblePseudonym(rabblePseudonym);
             resFromBody.setInviteResult(ApiConstants.ERROR);
 
-            pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_APPLY_FROM, JSON.toJSONString(resFromBody));
+            pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_FROM, JSON.toJSONString(resFromBody));
 
         } else {
 
-            InviteApplyFromResBody resFromBody = new InviteApplyFromResBody();
+            InviteFromResBody resFromBody = new InviteFromResBody();
             resFromBody.setInviteResult(ApiConstants.SUCCESS);
             resFromBody.setRabblePseudonym(rabblePseudonym);
 
-            pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_APPLY_FROM, JSON.toJSONString(resFromBody));
+            pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_FROM, JSON.toJSONString(resFromBody));
 
 
-            InviteApplyToResBody resToBody = new InviteApplyToResBody();
+            InviteToResBody resToBody = new InviteToResBody();
             resToBody.setOriginPseudonym(pseudonym);
             resToBody.setOriginGoodName(originBanditEntity.getGoodName());
             resToBody.setNotes(reqBody.getNotes());
 
-            pipeBody.addMessageBody(rabblePseudonym, ArgotType.RES_INVITE_APPLY_TO, JSON.toJSONString(resToBody));
+            pipeBody.addMessageBody(rabblePseudonym, ArgotType.RES_INVITE_TO, JSON.toJSONString(resToBody));
         }
         return pipeBody;
     }

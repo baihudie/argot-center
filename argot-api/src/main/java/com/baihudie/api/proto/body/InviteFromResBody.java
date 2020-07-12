@@ -3,7 +3,7 @@ package com.baihudie.api.proto.body;
 import lombok.Data;
 
 @Data
-public class InviteApplyFromResBody {
+public class InviteFromResBody {
 
 //    public static final int RESULT_APPLY_TO = 0;
 //

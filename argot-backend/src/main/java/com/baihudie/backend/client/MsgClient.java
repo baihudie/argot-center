@@ -67,8 +67,21 @@ public class MsgClient {
                     .connect(new InetSocketAddress(serverHost, serverPort)).channel();
 //                    .connect(new InetSocketAddress("110ceee9.nat123.fun", 25574)).channel();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-            while (true) {
+            simulateConsole(channel, msgClientHandler);
+
+        } finally {
+            eventLoopGroup.shutdownGracefully();
+        }
+    }
+
+    private static void simulateConsole(Channel channel, MsgClientHandler msgClientHandler) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+        while (true) {
+
+            try {
+
+
                 String content = reader.readLine();
 
                 boolean boo = validateActive(msgClientHandler);
@@ -77,19 +90,19 @@ public class MsgClient {
                     break;
                 }
 
-                if (content.startsWith("who")) {
+                if (content.startsWith("query")) {
 
-                    msgClientHandler.who(channel);
+                    msgClientHandler.queryAll(channel);
 
                 } else if (content.startsWith("chats ")) {
 
                     msgClientHandler.chats(content.substring("chats ".length()), channel);
 
-                } else if (content.startsWith("invite_apply ")) {
+                } else if (content.startsWith("invite ")) {
 
-                    String commandLine = content.substring("invite_apply ".length()).trim();
+                    String commandLine = content.substring("invite ".length()).trim();
                     if (commandLine.length() == 0) {
-                        log.info("invite_apply NO ONE");
+                        log.info("invite NO ONE");
                         continue;
                     }
 
@@ -106,9 +119,9 @@ public class MsgClient {
 
                     msgClientHandler.inviteApply(rabblePseudonym, notes, channel);
 
-                } else if (content.startsWith("invite_accept ")) {
+                } else if (content.startsWith("accept ")) {
 
-                    String commandLine = content.substring("invite_accept ".length()).trim();
+                    String commandLine = content.substring("accept ".length()).trim();
                     if (commandLine.length() == 0) {
                         log.info("invite_accept NO ONE");
                         continue;
@@ -128,9 +141,10 @@ public class MsgClient {
                     msgClientHandler.inviteAccept(acceptPseudonym, channel);
 
                 }
+            } catch (Exception ex) {
+                
+                log.error("ERROR:" + ex.getMessage(), ex);
             }
-        } finally {
-            eventLoopGroup.shutdownGracefully();
         }
     }
 

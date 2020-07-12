@@ -18,8 +18,8 @@ public interface ArgotType {
     //MESSAGE RANGE:20000-29999
     int REQ_CHATS = 20000;
     int REQ_QUERY_ALL = 20001;
-    int REQ_INVITE_APPLY = 20002;
-    int REQ_INVITE_ACCEPT = 20003;
+    int REQ_INVITE = 20002;
+    int REQ_ACCEPT = 20003;
 
     int MAX_REQ_MSG = 29999;//==============
 
@@ -42,15 +42,15 @@ public interface ArgotType {
     //MESSAGE RANGE:60000-69999
     int RES_CHATS = 60001;
     int RES_QUERY_ALL = 60002;
-    int RES_INVITE_APPLY_FROM = 60003;
-    int RES_INVITE_APPLY_TO = 60004;
-    int RES_INVITE_ACCEPT_FROM = 60005;
-    int RES_INVITE_ACCEPT_TO = 60006;
+    int RES_INVITE_FROM = 60003;
+    int RES_INVITE_TO = 60004;
+    int RES_ACCEPT_FROM = 60005;
+    int RES_ACCEPT_TO = 60006;
     int RES_TCP_STEP_1_TO = 60007;
-    int RES_TCP_STEP_1_FROM = 6008;
+    int RES_TCP_STEP_1_FROM = 60008;
     int RES_TCP_STEP_2_TO = 60009;
     int RES_TCP_STEP_2_FROM = 60010;
-    int RES_TCP_STEP_3 = 6000;
+    int RES_TCP_STEP_3 = 60000;
     int RES_TCP_STEP_4 = 60010;
     int RES_TCP_STEP_5 = 60011;
 

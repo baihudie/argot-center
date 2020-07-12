@@ -25,13 +25,13 @@ public class PipeHandlerDispatcher implements InitializingBean {
     private ChatsHandler chatsHandler;
 
     @Autowired
-    private WhoHandler whoHandler;
+    private QueryAllHandler whoHandler;
 
     @Autowired
-    private InviteApplyHandler inviteApplyHandler;
+    private InviteHandler inviteApplyHandler;
 
     @Autowired
-    private InviteAcceptHandler inviteAcceptHandler;
+    private AcceptHandler inviteAcceptHandler;
 
     @Autowired
     private TcpStep1Handler tcpStep1Handler;
@@ -59,7 +59,7 @@ public class PipeHandlerDispatcher implements InitializingBean {
     protected Map<Integer, PipeHandlerDispatcher> msgDispatcher = new ConcurrentHashMap<>();
     protected Map<Integer, PipeHandlerDispatcher> autoDispatcher = new ConcurrentHashMap<>();
 
-    protected Map<String, TcpEntity> rabbleMap = new ConcurrentHashMap<>();
+    protected static Map<String, TcpEntity> rabbleMap = new ConcurrentHashMap<>();
     protected static final String SPLIT = "-";
     protected static final int FLAG_1 = 1;
     protected static final int FLAG_2 = 2;
@@ -69,8 +69,8 @@ public class PipeHandlerDispatcher implements InitializingBean {
 
         msgDispatcher.put(ArgotType.REQ_CHATS, chatsHandler);
         msgDispatcher.put(ArgotType.REQ_QUERY_ALL, whoHandler);
-        msgDispatcher.put(ArgotType.REQ_INVITE_APPLY, inviteApplyHandler);
-        msgDispatcher.put(ArgotType.REQ_INVITE_ACCEPT, inviteAcceptHandler);
+        msgDispatcher.put(ArgotType.REQ_INVITE, inviteApplyHandler);
+        msgDispatcher.put(ArgotType.REQ_ACCEPT, inviteAcceptHandler);
 
         autoDispatcher.put(ArgotType.REQ_TCP_STEP_1, tcpStep1Handler);
         autoDispatcher.put(ArgotType.REQ_TCP_STEP_2, tcpStep2Handler);

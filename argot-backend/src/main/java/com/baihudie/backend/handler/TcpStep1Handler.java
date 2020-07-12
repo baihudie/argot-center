@@ -37,6 +37,8 @@ public class TcpStep1Handler extends PipeHandlerDispatcher {
         if (rabbleBanditEntity == null) {
 
             TcpStep1ResFromBody resFromBody = new TcpStep1ResFromBody();
+
+            resFromBody.setRabblePseudonym(rabblePseudonym);
             resFromBody.setStepResult(ApiConstants.ERROR);
             pipeBody.addMessageBody(pseudonym, ArgotType.RES_TCP_STEP_1_FROM, JSON.toJSONString(resFromBody));
             return pipeBody;
@@ -50,12 +52,10 @@ public class TcpStep1Handler extends PipeHandlerDispatcher {
         rabbleMap.put(pseudonym + SPLIT + rabblePseudonym, tcpEntity);
 
         TcpStep1ResFromBody resFromBody = new TcpStep1ResFromBody();
+        resFromBody.setRabblePseudonym(rabblePseudonym);
         resFromBody.setStepResult(ApiConstants.SUCCESS);
-        pipeBody.addMessageBody(pseudonym, ArgotType.RES_TCP_STEP_1_FROM, JSON.toJSONString(resFromBody));
 
-//        InetSocketAddress originAddress = (InetSocketAddress) channel.remoteAddress();
-//        tcpEntity.setOriginHost(originAddress.getAddress().getHostAddress());
-//        tcpEntity.setOriginPort(originAddress.getPort());
+        pipeBody.addMessageBody(pseudonym, ArgotType.RES_TCP_STEP_1_FROM, JSON.toJSONString(resFromBody));
 
         TcpStep1ResToBody resToBody = new TcpStep1ResToBody();
         resToBody.setOriginPseudonym(pseudonym);

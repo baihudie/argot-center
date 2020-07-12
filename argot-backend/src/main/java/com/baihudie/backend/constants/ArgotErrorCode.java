@@ -20,4 +20,5 @@ public interface ArgotErrorCode {
     int CLI_PSEUDONYM_ACCEPT_NULL =2002 ;
     int CLI_PSEUDONYM_ACCEPT_STATUS_ERROR = 2003;
     int CLI_PSEUDONYM_APPLY_SELF = 2004;
+    int CLE_APPLY_NULL = 2005;
 }

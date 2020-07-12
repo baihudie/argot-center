@@ -3,7 +3,7 @@ package com.baihudie.api.proto.body;
 import lombok.Data;
 
 @Data
-public class InviteAcceptToResBody {
+public class AcceptToResBody {
 
 //    public static final int ACCEPT = 0;
 //    public static final int DENY = 1;

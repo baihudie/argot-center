@@ -2,9 +2,9 @@ package com.baihudie.backend.handler;
 
 import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
-import com.baihudie.api.proto.body.InviteAcceptFromResBody;
-import com.baihudie.api.proto.body.InviteAcceptReqBody;
-import com.baihudie.api.proto.body.InviteAcceptToResBody;
+import com.baihudie.api.proto.body.AcceptFromResBody;
+import com.baihudie.api.proto.body.AcceptReqBody;
+import com.baihudie.api.proto.body.AcceptToResBody;
 import com.baihudie.api.utils.ApiConstants;
 import com.baihudie.backend.constants.ArgotErrorCode;
 import com.baihudie.backend.constants.ArgotException;
@@ -14,11 +14,11 @@ import com.baihudie.backend.pipe.PipeHandlerDispatcher;
 import org.springframework.stereotype.Component;
 
 @Component
-public class InviteAcceptHandler extends PipeHandlerDispatcher {
+public class AcceptHandler extends PipeHandlerDispatcher {
 
     public PipeBodyMsg genPipeBodyMsg(String pseudonym, int reqType, String body) {
 
-        InviteAcceptReqBody reqBody = JSON.parseObject(body, InviteAcceptReqBody.class);
+        AcceptReqBody reqBody = JSON.parseObject(body, AcceptReqBody.class);
 
         String originPseudonym = reqBody.getOriginPseudonym();
 
@@ -38,26 +38,26 @@ public class InviteAcceptHandler extends PipeHandlerDispatcher {
 
         if (toBanditEntity == null) {
 
-            InviteAcceptFromResBody resFromBody = new InviteAcceptFromResBody();
+            AcceptFromResBody resFromBody = new AcceptFromResBody();
 
             resFromBody.setOriginPseudonym(originPseudonym);
             resFromBody.setInviteResult(ApiConstants.ERROR);
 
-            pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_ACCEPT_FROM, JSON.toJSONString(resFromBody));
+            pipeBody.addMessageBody(pseudonym, ArgotType.RES_ACCEPT_FROM, JSON.toJSONString(resFromBody));
 
         } else {
 
-            InviteAcceptFromResBody resFromBody = new InviteAcceptFromResBody();
+            AcceptFromResBody resFromBody = new AcceptFromResBody();
             resFromBody.setInviteResult(ApiConstants.SUCCESS);
             resFromBody.setOriginPseudonym(originPseudonym);
 
-            pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_ACCEPT_FROM, JSON.toJSONString(resFromBody));
+            pipeBody.addMessageBody(pseudonym, ArgotType.RES_ACCEPT_FROM, JSON.toJSONString(resFromBody));
 
 
-            InviteAcceptToResBody resToBody = new InviteAcceptToResBody();
+            AcceptToResBody resToBody = new AcceptToResBody();
             resToBody.setRabblePseudonym(pseudonym);
 
-            pipeBody.addMessageBody(originPseudonym, ArgotType.RES_INVITE_ACCEPT_TO, JSON.toJSONString(resToBody));
+            pipeBody.addMessageBody(originPseudonym, ArgotType.RES_ACCEPT_TO, JSON.toJSONString(resToBody));
         }
 
         return pipeBody;

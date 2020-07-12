@@ -40,6 +40,7 @@ public class MsgServer {
                     .option(ChannelOption.SO_RCVBUF, 32 * 1024)  //接收缓存
                     .childOption(ChannelOption.SO_KEEPALIVE, true)//是否保持连接
                     .childHandler(new ChannelInitializer<SocketChannel>() {
+                        
                         //设置处理请求的逻辑处理类
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
