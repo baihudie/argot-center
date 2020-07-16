@@ -2,8 +2,7 @@ package com.baihudie.backend.handler;
 
 import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
-import com.baihudie.api.proto.body.QueryAllResBody;
-import com.baihudie.api.proto.body.QueryAllResBodySub;
+import com.baihudie.api.body.QueryAllBody;
 import com.baihudie.backend.entity.BanditEntity;
 import com.baihudie.backend.pipe.MessageBody;
 import com.baihudie.backend.pipe.PipeBodyMsg;
@@ -23,8 +22,8 @@ public class QueryAllHandler extends PipeHandlerDispatcher {
         PipeBodyMsg pipeBody = new PipeBodyMsg(PipeBodyMsg.SEND_TO_SELF);
         MessageBody messageBody = new MessageBody();
 
-        QueryAllResBody resBody = new QueryAllResBody();
-        List<QueryAllResBodySub> pseudonymList = new ArrayList<>();
+        QueryAllBody.QueryAllResBody resBody = new QueryAllBody.QueryAllResBody();
+        List<QueryAllBody.QueryAllResBodySub> pseudonymList = new ArrayList<>();
         resBody.setPseudonymList(pseudonymList);
 
         Set<Map.Entry<String, BanditEntity>> entrySet = pseudonymMap.entrySet();
@@ -32,7 +31,7 @@ public class QueryAllHandler extends PipeHandlerDispatcher {
             String pseudonymOne = entry.getKey();
             BanditEntity banditEntity = entry.getValue();
 
-            QueryAllResBodySub bodySub = new QueryAllResBodySub();
+            QueryAllBody.QueryAllResBodySub bodySub = new QueryAllBody.QueryAllResBodySub();
             bodySub.setPseudonym(pseudonymOne);
             bodySub.setGoodName(banditEntity.getGoodName());
 

@@ -2,12 +2,10 @@ package com.baihudie.backend.handler;
 
 import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
-import com.baihudie.api.proto.body.AcceptFromResBody;
-import com.baihudie.api.proto.body.AcceptReqBody;
-import com.baihudie.api.proto.body.AcceptToResBody;
+import com.baihudie.api.body.AcceptBody;
 import com.baihudie.api.utils.ApiConstants;
 import com.baihudie.backend.constants.ArgotErrorCode;
-import com.baihudie.backend.constants.ArgotException;
+import com.baihudie.api.exception.ArgotException;
 import com.baihudie.backend.entity.BanditEntity;
 import com.baihudie.backend.pipe.PipeBodyMsg;
 import com.baihudie.backend.pipe.PipeHandlerDispatcher;
@@ -18,46 +16,54 @@ public class AcceptHandler extends PipeHandlerDispatcher {
 
     public PipeBodyMsg genPipeBodyMsg(String pseudonym, int reqType, String body) {
 
-        AcceptReqBody reqBody = JSON.parseObject(body, AcceptReqBody.class);
+        AcceptBody.AcceptReqBody reqBody = JSON.parseObject(body, AcceptBody.AcceptReqBody.class);
 
-        String originPseudonym = reqBody.getOriginPseudonym();
-
-        if (originPseudonym == null || originPseudonym.length() == 0) {
-
-            throw new ArgotException(ArgotErrorCode.PSEUDONYM_NULL, "toPseudonym is NULL.");
+        String bBanditCode = reqBody.getBBanditCode();
+        if (bBanditCode == null || bBanditCode.length() == 0) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0001, "AcceptHandler BANDIT_CODE_NULL");
         }
+
+        String aPseudonym = reqBody.getAPseudonym();
+        if (aPseudonym == null || aPseudonym.length() == 0) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0002, "toPseudonym is NULL.");
+        }
+
+        BanditEntity bBanditEntity = pseudonymMap.get(pseudonym);
+        if (bBanditEntity == null) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0003, "InviteHandler PSEUDONYM_NULL");
+        }
+        if (!bBanditEntity.getBanditCode().equals(bBanditCode)) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0004, "InviteHandler BANDIT_CODE_ERROR");
+        }
+
 
         PipeBodyMsg pipeBody = new PipeBodyMsg(PipeBodyMsg.SEND_TO_LIST);
 
-        BanditEntity fromBanditEntity = pseudonymMap.get(pseudonym);
-        BanditEntity toBanditEntity = pseudonymMap.get(originPseudonym);
+        BanditEntity aBanditEntity = pseudonymMap.get(aPseudonym);
 
-        if (fromBanditEntity == null) {
-            throw new ArgotException(ArgotErrorCode.PSEUDONYM_NULL, "InviteApplyHandler,from pseudonym is NULL");
-        }
+        if (aBanditEntity == null) {
 
-        if (toBanditEntity == null) {
+            AcceptBody.AcceptFromResBody resFromBody = new AcceptBody.AcceptFromResBody();
 
-            AcceptFromResBody resFromBody = new AcceptFromResBody();
-
-            resFromBody.setOriginPseudonym(originPseudonym);
-            resFromBody.setInviteResult(ApiConstants.ERROR);
+            resFromBody.setAPseudonym(aPseudonym);
+            resFromBody.setResult(ApiConstants.ERROR);
 
             pipeBody.addMessageBody(pseudonym, ArgotType.RES_ACCEPT_FROM, JSON.toJSONString(resFromBody));
 
         } else {
 
-            AcceptFromResBody resFromBody = new AcceptFromResBody();
-            resFromBody.setInviteResult(ApiConstants.SUCCESS);
-            resFromBody.setOriginPseudonym(originPseudonym);
+            AcceptBody.AcceptFromResBody resFromBody = new AcceptBody.AcceptFromResBody();
+            resFromBody.setResult(ApiConstants.SUCCESS);
+            resFromBody.setAPseudonym(aPseudonym);
 
             pipeBody.addMessageBody(pseudonym, ArgotType.RES_ACCEPT_FROM, JSON.toJSONString(resFromBody));
 
+            AcceptBody.AcceptToResBody resToBody = new AcceptBody.AcceptToResBody();
+            resToBody.setBPseudonym(pseudonym);
+            resToBody.setBBanditCode(bBanditCode);
+            resToBody.setBGoodName(bBanditEntity.getGoodName());
 
-            AcceptToResBody resToBody = new AcceptToResBody();
-            resToBody.setRabblePseudonym(pseudonym);
-
-            pipeBody.addMessageBody(originPseudonym, ArgotType.RES_ACCEPT_TO, JSON.toJSONString(resToBody));
+            pipeBody.addMessageBody(aPseudonym, ArgotType.RES_ACCEPT_TO, JSON.toJSONString(resToBody));
         }
 
         return pipeBody;

@@ -6,6 +6,7 @@ import lombok.Data;
 public class PipeBodyMsg extends PipeBody {
 
     public PipeBodyMsg(int sendTo) {
+
         super(sendTo);
     }
 

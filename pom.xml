@@ -24,7 +24,8 @@
         <module>argot-backend</module>
 
         <module>argot-api</module>
-        <module>argot-desktop</module>
+        <module>argot-client</module>
+        <module>argot-client</module>
     </modules>
 
     <dependencyManagement>

@@ -1,66 +1,89 @@
 package com.baihudie.backend.handler;
 
 import com.alibaba.fastjson.JSON;
+import com.baihudie.api.body.TcpStep1Body;
 import com.baihudie.api.constants.ArgotType;
-import com.baihudie.api.proto.body.TcpStep1ReqBody;
-import com.baihudie.api.proto.body.TcpStep1ResFromBody;
-import com.baihudie.api.proto.body.TcpStep1ResToBody;
+import com.baihudie.api.exception.ArgotException;
 import com.baihudie.api.utils.ApiConstants;
 import com.baihudie.backend.constants.ArgotErrorCode;
-import com.baihudie.backend.constants.ArgotException;
 import com.baihudie.backend.entity.BanditEntity;
-import com.baihudie.backend.entity.TcpEntity;
-import com.baihudie.backend.pipe.PipeBodyAuto;
+import com.baihudie.backend.entity.ConnSwitchEntity;
 import com.baihudie.backend.pipe.PipeBodyMsg;
 import com.baihudie.backend.pipe.PipeHandlerDispatcher;
-import io.netty.channel.Channel;
 import org.springframework.stereotype.Component;
 
 @Component
 public class TcpStep1Handler extends PipeHandlerDispatcher {
 
 
-    public PipeBodyAuto genPipeBodyAuto(Channel channel, String pseudonym, int reqType, String body) {
+    public PipeBodyMsg genPipeBodyMsg(String pseudonym, int reqType, String body) {
 
-        TcpStep1ReqBody reqBody = JSON.parseObject(body, TcpStep1ReqBody.class);
+        TcpStep1Body.TcpStep1ReqBody reqBody = JSON.parseObject(body, TcpStep1Body.TcpStep1ReqBody.class);
 
-        String rabblePseudonym = reqBody.getRabblePseudonym();
-
-        if (rabblePseudonym == null || rabblePseudonym.length() == 0) {
-            throw new ArgotException(ArgotErrorCode.PSEUDONYM_NULL, "rabblePseudonym is NULL.");
+        String token = reqBody.getToken();
+        if (token == null || token.length() == 0) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0013, "rabblePseudonym is NULL.");
         }
 
-        BanditEntity rabbleBanditEntity = pseudonymMap.get(rabblePseudonym);
+        String bPseudonym = reqBody.getBPseudonym();
 
-        PipeBodyAuto pipeBody = new PipeBodyAuto(PipeBodyMsg.SEND_TO_LIST);
+        if (bPseudonym == null || bPseudonym.length() == 0) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0014, "rabblePseudonym is NULL.");
+        }
+//        String bPseudonym = banditCodeMap.get(bBanditCode);
+//        if (bPseudonym == null || bPseudonym.length() == 0) {
+//            throw new ArgotException(ArgotErrorCode.ERROR_0015, "rabblePseudonym is NULL.");
+//        }
 
-        if (rabbleBanditEntity == null) {
+        if (bPseudonym.equals(pseudonym)) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0016, "rabblePseudonym is NULL.");
+        }
 
-            TcpStep1ResFromBody resFromBody = new TcpStep1ResFromBody();
+        BanditEntity aBanditEntity = pseudonymMap.get(pseudonym);
+        if (aBanditEntity == null) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0017, "rabblePseudonym is NULL.");
+        }
 
-            resFromBody.setRabblePseudonym(rabblePseudonym);
-            resFromBody.setStepResult(ApiConstants.ERROR);
+        PipeBodyMsg pipeBody = new PipeBodyMsg(PipeBodyMsg.SEND_TO_LIST);
+
+        BanditEntity bBanditEntity = pseudonymMap.get(bPseudonym);
+        if (bBanditEntity == null) {
+
+            TcpStep1Body.TcpStep1ResFromBody resFromBody = new TcpStep1Body.TcpStep1ResFromBody();
+
+            resFromBody.setBPseudonym(pseudonym);
+            resFromBody.setToken(token);
+            resFromBody.setResult(ApiConstants.ERROR);
             pipeBody.addMessageBody(pseudonym, ArgotType.RES_TCP_STEP_1_FROM, JSON.toJSONString(resFromBody));
             return pipeBody;
 
         }
 
         //pseudonym 是申请者，被同意者，发起连接者。rabblePseudonym是被申请者，同意者，被连接者
-        TcpEntity tcpEntity = new TcpEntity();
-        tcpEntity.setFlag(FLAG_1);
-        tcpEntity.setOriginPseudonym(pseudonym);
-        rabbleMap.put(pseudonym + SPLIT + rabblePseudonym, tcpEntity);
+        ConnSwitchEntity connSwitchEntity = new ConnSwitchEntity();
+        connSwitchEntity.setTcp1(ConnSwitchEntity.OK);
+        connSwitchEntity.setToken(token);
+        connSwitchEntity.setABanditCode(aBanditEntity.getBanditCode());
+        connSwitchEntity.setAPseudonym(pseudonym);
+        connSwitchEntity.setBBanditCode(bBanditEntity.getBanditCode());
+        connSwitchEntity.setBPseudonym(bBanditEntity.getPseudonym());
 
-        TcpStep1ResFromBody resFromBody = new TcpStep1ResFromBody();
-        resFromBody.setRabblePseudonym(rabblePseudonym);
-        resFromBody.setStepResult(ApiConstants.SUCCESS);
+        connSwitchMap.put(token, connSwitchEntity);
+
+        TcpStep1Body.TcpStep1ResFromBody resFromBody = new TcpStep1Body.TcpStep1ResFromBody();
+        resFromBody.setBPseudonym(pseudonym);
+        resFromBody.setBPseudonym(bPseudonym);
+        resFromBody.setToken(token);
+        resFromBody.setResult(ApiConstants.SUCCESS);
 
         pipeBody.addMessageBody(pseudonym, ArgotType.RES_TCP_STEP_1_FROM, JSON.toJSONString(resFromBody));
 
-        TcpStep1ResToBody resToBody = new TcpStep1ResToBody();
-        resToBody.setOriginPseudonym(pseudonym);
 
-        pipeBody.addMessageBody(rabblePseudonym, ArgotType.RES_TCP_STEP_1_TO, JSON.toJSONString(resToBody));
+        TcpStep1Body.TcpStep1ResToBody resToBody = new TcpStep1Body.TcpStep1ResToBody();
+        resToBody.setABanditCode(aBanditEntity.getBanditCode());
+        resToBody.setAPseudonym(pseudonym);
+        resToBody.setToken(token);
+        pipeBody.addMessageBody(bPseudonym, ArgotType.RES_TCP_STEP_1_TO, JSON.toJSONString(resToBody));
 
         return pipeBody;
 

@@ -1,6 +1,6 @@
-package com.baihudie.api.constants;
+package com.baihudie.client.constants;
 
-public interface ArgotType {
+public interface ArgotClientType {
 
     int REQ_TEST = 98;
     int RES_TEST = 99;
@@ -44,6 +44,11 @@ public interface ArgotType {
     int REQ_TCP_STEP_3 = 30007;
     int REQ_TCP_STEP_4 = 30008;
 
+    /**
+     * CLIENT RANGE:40000-49999
+     */
+
+    int REQ_CLIENT_CHAT = 40000;
 
     /////////////
     // RES_TYPE
@@ -75,5 +80,10 @@ public interface ArgotType {
     int RES_TCP_STEP_3 = 60013;
     int RES_TCP_STEP_4 = 60014;
 
+    /**
+     * CLIENT RANGE:70000-79999
+     */
+
+    int RES_CLIENT_CHAT = 70000;
 
 }

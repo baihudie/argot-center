@@ -2,8 +2,7 @@ package com.baihudie.backend.handler;
 
 import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
-import com.baihudie.api.proto.body.ChatsReqBody;
-import com.baihudie.api.proto.body.ChatsResBody;
+import com.baihudie.api.body.ChatsBody;
 import com.baihudie.backend.pipe.PipeBodyMsg;
 import com.baihudie.backend.pipe.PipeHandlerDispatcher;
 import org.springframework.stereotype.Component;
@@ -15,9 +14,9 @@ public class ChatsHandler extends PipeHandlerDispatcher {
 
         PipeBodyMsg pipeBody = new PipeBodyMsg(PipeBodyMsg.SEND_TO_ALL);
 
-        ChatsReqBody reqBody = JSON.parseObject(body, ChatsReqBody.class);
+        ChatsBody.ChatsReqBody reqBody = JSON.parseObject(body, ChatsBody.ChatsReqBody.class);
 
-        ChatsResBody resBody = new ChatsResBody();
+        ChatsBody.ChatsResBody resBody = new ChatsBody.ChatsResBody();
         String content = reqBody.getContent();
         resBody.setContent(content);
         resBody.setPseudonym(pseudonym);

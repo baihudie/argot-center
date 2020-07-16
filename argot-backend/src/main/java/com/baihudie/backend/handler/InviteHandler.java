@@ -2,12 +2,10 @@ package com.baihudie.backend.handler;
 
 import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
-import com.baihudie.api.proto.body.InviteFromResBody;
-import com.baihudie.api.proto.body.InviteReqBody;
-import com.baihudie.api.proto.body.InviteToResBody;
+import com.baihudie.api.body.InviteBody;
 import com.baihudie.api.utils.ApiConstants;
 import com.baihudie.backend.constants.ArgotErrorCode;
-import com.baihudie.backend.constants.ArgotException;
+import com.baihudie.api.exception.ArgotException;
 import com.baihudie.backend.entity.BanditEntity;
 import com.baihudie.backend.pipe.PipeBodyMsg;
 import com.baihudie.backend.pipe.PipeHandlerDispatcher;
@@ -18,47 +16,55 @@ public class InviteHandler extends PipeHandlerDispatcher {
 
     public PipeBodyMsg genPipeBodyMsg(String pseudonym, int reqType, String body) {
 
+        InviteBody.InviteReqBody reqBody = JSON.parseObject(body, InviteBody.InviteReqBody.class);
 
-        InviteReqBody reqBody = JSON.parseObject(body, InviteReqBody.class);
-        String rabblePseudonym = reqBody.getRabblePseudonym();
-        if (rabblePseudonym == null || rabblePseudonym.length() == 0) {
-            throw new ArgotException(ArgotErrorCode.PSEUDONYM_NULL, "toPseudonym is NULL.");
+        String aBanditCode = reqBody.getABanditCode();
+        if(aBanditCode == null || aBanditCode.length() == 0){
+            throw new ArgotException(ArgotErrorCode.ERROR_0009, "InviteHandler BANDIT_CODE_NULL");
         }
 
-        BanditEntity originBanditEntity = pseudonymMap.get(pseudonym);
-        BanditEntity rabbleBanditEntity = pseudonymMap.get(rabblePseudonym);
+        String bPseudonym = reqBody.getBPseudonym();
+        if (bPseudonym == null || bPseudonym.length() == 0) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0010, "InviteHandler PSEUDONYM_NULL");
+        }
 
-        if (originBanditEntity == null) {
-            throw new ArgotException(ArgotErrorCode.PSEUDONYM_NULL, "InviteApplyHandler,from pseudonym is NULL");
+        BanditEntity aBanditEntity = pseudonymMap.get(pseudonym);
+        if (aBanditEntity == null) {
+            throw new ArgotException(ArgotErrorCode.ERROR_0011, "InviteHandler PSEUDONYM_NULL");
+        }
+        if(!aBanditEntity.getBanditCode().equals(aBanditCode)){
+            throw new ArgotException(ArgotErrorCode.ERROR_0012, "InviteHandler BANDIT_CODE_ERROR");
         }
 
 
         PipeBodyMsg pipeBody = new PipeBodyMsg(PipeBodyMsg.SEND_TO_LIST);
 
-        if (rabbleBanditEntity == null) {
+        BanditEntity bBanditEntity = pseudonymMap.get(bPseudonym);
+        if (bBanditEntity == null) {
 
-            InviteFromResBody resFromBody = new InviteFromResBody();
+            InviteBody.InviteFromResBody resFromBody = new InviteBody.InviteFromResBody();
 
-            resFromBody.setRabblePseudonym(rabblePseudonym);
-            resFromBody.setInviteResult(ApiConstants.ERROR);
+            resFromBody.setBPseudonym(bPseudonym);
+            resFromBody.setResult(ApiConstants.ERROR);
 
             pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_FROM, JSON.toJSONString(resFromBody));
 
         } else {
 
-            InviteFromResBody resFromBody = new InviteFromResBody();
-            resFromBody.setInviteResult(ApiConstants.SUCCESS);
-            resFromBody.setRabblePseudonym(rabblePseudonym);
+            InviteBody.InviteFromResBody resFromBody = new InviteBody.InviteFromResBody();
+            resFromBody.setResult(ApiConstants.SUCCESS);
+            resFromBody.setBPseudonym(bPseudonym);
 
             pipeBody.addMessageBody(pseudonym, ArgotType.RES_INVITE_FROM, JSON.toJSONString(resFromBody));
 
 
-            InviteToResBody resToBody = new InviteToResBody();
-            resToBody.setOriginPseudonym(pseudonym);
-            resToBody.setOriginGoodName(originBanditEntity.getGoodName());
+            InviteBody.InviteToResBody resToBody = new InviteBody.InviteToResBody();
+            resToBody.setAPseudonym(pseudonym);
+            resToBody.setABanditCode(aBanditCode);
+            resToBody.setAGoodName(aBanditEntity.getGoodName());
             resToBody.setNotes(reqBody.getNotes());
 
-            pipeBody.addMessageBody(rabblePseudonym, ArgotType.RES_INVITE_TO, JSON.toJSONString(resToBody));
+            pipeBody.addMessageBody(bPseudonym, ArgotType.RES_INVITE_TO, JSON.toJSONString(resToBody));
         }
         return pipeBody;
     }

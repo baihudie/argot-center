@@ -1,10 +1,10 @@
 package com.baihudie.backend.pipe;
 
 import com.baihudie.api.constants.ArgotType;
+import com.baihudie.api.exception.ArgotException;
 import com.baihudie.backend.constants.ArgotErrorCode;
-import com.baihudie.backend.constants.ArgotException;
 import com.baihudie.backend.entity.BanditEntity;
-import com.baihudie.backend.entity.TcpEntity;
+import com.baihudie.backend.entity.ConnSwitchEntity;
 import com.baihudie.backend.handler.*;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
@@ -46,23 +46,16 @@ public class PipeHandlerDispatcher implements InitializingBean {
     private TcpStep4Handler tcpStep4Handler;
 
     @Autowired
-    private TcpStep5Handler tcpStep5Handler;
-
-    @Autowired
     private ActiveHandler activeHandler;
-
-    //pseudonym - banditCode
-    protected static Map<String, BanditEntity> pseudonymMap = new ConcurrentHashMap<>(2000);
-    protected static Map<String, String> banditCodeMap = new ConcurrentHashMap<>(2000);
 
     protected Map<Integer, PipeHandlerDispatcher> conDispatcher = new ConcurrentHashMap<>();
     protected Map<Integer, PipeHandlerDispatcher> msgDispatcher = new ConcurrentHashMap<>();
     protected Map<Integer, PipeHandlerDispatcher> autoDispatcher = new ConcurrentHashMap<>();
 
-    protected static Map<String, TcpEntity> rabbleMap = new ConcurrentHashMap<>();
-    protected static final String SPLIT = "-";
-    protected static final int FLAG_1 = 1;
-    protected static final int FLAG_2 = 2;
+    //pseudonym - banditCode
+    protected static Map<String, BanditEntity> pseudonymMap = new ConcurrentHashMap<>(2000);
+    protected static Map<String, String> banditCodeMap = new ConcurrentHashMap<>(2000);
+    protected static Map<String, ConnSwitchEntity> connSwitchMap = new ConcurrentHashMap<>();
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -71,12 +64,11 @@ public class PipeHandlerDispatcher implements InitializingBean {
         msgDispatcher.put(ArgotType.REQ_QUERY_ALL, whoHandler);
         msgDispatcher.put(ArgotType.REQ_INVITE, inviteApplyHandler);
         msgDispatcher.put(ArgotType.REQ_ACCEPT, inviteAcceptHandler);
+        msgDispatcher.put(ArgotType.REQ_TCP_STEP_1, tcpStep1Handler);
+        msgDispatcher.put(ArgotType.REQ_TCP_STEP_2, tcpStep2Handler);
 
-        autoDispatcher.put(ArgotType.REQ_TCP_STEP_1, tcpStep1Handler);
-        autoDispatcher.put(ArgotType.REQ_TCP_STEP_2, tcpStep2Handler);
         autoDispatcher.put(ArgotType.REQ_TCP_STEP_3, tcpStep3Handler);
         autoDispatcher.put(ArgotType.REQ_TCP_STEP_4, tcpStep4Handler);
-        autoDispatcher.put(ArgotType.REQ_TCP_STEP_5, tcpStep5Handler);
 
         conDispatcher.put(ArgotType.REQ_ACTIVE, activeHandler);
     }
@@ -85,7 +77,7 @@ public class PipeHandlerDispatcher implements InitializingBean {
 
         PipeHandlerDispatcher autoPipeBodyHandler = autoDispatcher.get(reqType);
         if (autoPipeBodyHandler == null) {
-            throw new ArgotException(ArgotErrorCode.REQ_TYPE_NOT_SUPPORT, "REQ_TYPE_NOT_SUPPORT reqType:" + reqType);
+            throw new ArgotException(ArgotErrorCode.ERROR_0023, "REQ_TYPE_NOT_SUPPORT reqType:" + reqType);
         }
         return autoPipeBodyHandler.genPipeBodyAuto(channel, pseudonym, reqType, body);
     }
@@ -95,18 +87,17 @@ public class PipeHandlerDispatcher implements InitializingBean {
 
         PipeHandlerDispatcher msgPipeBodyHandler = msgDispatcher.get(reqType);
         if (msgPipeBodyHandler == null) {
-            throw new ArgotException(ArgotErrorCode.REQ_TYPE_NOT_SUPPORT, "REQ_TYPE_NOT_SUPPORT reqType:" + reqType);
+            throw new ArgotException(ArgotErrorCode.ERROR_0024, "REQ_TYPE_NOT_SUPPORT reqType:" + reqType);
         }
         return msgPipeBodyHandler.genPipeBodyMsg(pseudonym, reqType, body);
     }
 
 
-    //    public ResActiveBody genResActiveBody(ReqActiveBody reqBody) {
     public PipeBodyCon genConPipeBody(String pseudonym, int reqType, String body) {
 
         PipeHandlerDispatcher conPipeBodyHandler = conDispatcher.get(reqType);
         if (conPipeBodyHandler == null) {
-            throw new ArgotException(ArgotErrorCode.REQ_TYPE_NOT_SUPPORT, "REQ_TYPE_NOT_SUPPORT reqType:" + reqType);
+            throw new ArgotException(ArgotErrorCode.ERROR_0025, "REQ_TYPE_NOT_SUPPORT reqType:" + reqType);
         }
         return conPipeBodyHandler.genPipeBodyCon(pseudonym, reqType, body);
 

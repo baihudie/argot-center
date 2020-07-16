@@ -1,4 +1,4 @@
-package com.baihudie.backend.entity;
+package com.baihudie.client.entity;
 
 import lombok.Data;
 
@@ -14,5 +14,13 @@ public class BanditEntity {
     //名字
     private String goodName;
 
+//    // ip
+//    private String hostIp;
+//
+//    // port
+//    private Integer hostPort;
+//
+//    //状态
+//    private String status;
 
 }

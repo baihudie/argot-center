@@ -2,10 +2,9 @@ package com.baihudie.backend.handler;
 
 import com.alibaba.fastjson.JSON;
 import com.baihudie.api.constants.ArgotType;
-import com.baihudie.api.proto.body.ActiveReqBody;
-import com.baihudie.api.proto.body.ActiveResBody;
+import com.baihudie.api.body.ActiveBody;
 import com.baihudie.backend.constants.ArgotErrorCode;
-import com.baihudie.backend.constants.ArgotException;
+import com.baihudie.api.exception.ArgotException;
 import com.baihudie.backend.entity.BanditEntity;
 import com.baihudie.backend.pipe.ControlBody;
 import com.baihudie.backend.pipe.PipeBody;
@@ -20,25 +19,25 @@ public class ActiveHandler extends PipeHandlerDispatcher {
 
     public PipeBodyCon genPipeBodyCon(String nullPseudonym, int reqType, String body) {
 
-        ActiveReqBody reqActiveBody = JSON.parseObject(body, ActiveReqBody.class);
+        ActiveBody.ActiveReqBody reqActiveBody = JSON.parseObject(body, ActiveBody.ActiveReqBody.class);
 
         if (nullPseudonym != null && nullPseudonym.length() > 0) {
-            throw new ArgotException(ArgotErrorCode.PSEUDONYM_NOT_NULL, "PSEUDONYM is NOT NULL");
+            throw new ArgotException(ArgotErrorCode.ERROR_0005, "PSEUDONYM is NOT NULL");
         }
 
         // validate
         String banditCode = reqActiveBody.getBanditCode();
         if (banditCode == null) {
-            throw new ArgotException(ArgotErrorCode.BANDIT_CODE_NULL, "BANDIT_CODE is NULL");
+            throw new ArgotException(ArgotErrorCode.ERROR_0006, "BANDIT_CODE is NULL");
         }
 
         if (pseudonymMap.containsValue(banditCode)) {
-            throw new ArgotException(ArgotErrorCode.BANDIT_CODE_EXIST, "BANDIT_CODE exist");
+            throw new ArgotException(ArgotErrorCode.ERROR_0007, "BANDIT_CODE exist");
         }
 
         String newPseudonym = UUID.randomUUID().toString().replaceAll("-", "");
         if (pseudonymMap.containsKey(newPseudonym)) {
-            throw new ArgotException(ArgotErrorCode.BANDIT_CODE_EXIST, "BANDIT_CODE exist");
+            throw new ArgotException(ArgotErrorCode.ERROR_0008, "BANDIT_CODE exist");
         }
 
         //OK的情况下。
@@ -46,6 +45,7 @@ public class ActiveHandler extends PipeHandlerDispatcher {
         String goodName = reqActiveBody.getGoodName();
 
         BanditEntity banditEntity = new BanditEntity();
+        banditEntity.setPseudonym(newPseudonym);
         banditEntity.setBanditCode(banditCode);
         banditEntity.setGoodName(goodName);
 
@@ -63,7 +63,7 @@ public class ActiveHandler extends PipeHandlerDispatcher {
 
         //信息平面，外部
         //发送消息
-        ActiveResBody resBody = new ActiveResBody();
+        ActiveBody.ActiveResBody resBody = new ActiveBody.ActiveResBody();
         resBody.setPseudonym(newPseudonym);
 
         pipeBodyCon.addMessageBody(newPseudonym, ArgotType.RES_ACTIVE, JSON.toJSONString(resBody));
